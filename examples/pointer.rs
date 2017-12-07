@@ -6,6 +6,7 @@ use std::rc::Rc;
 use wlroots::{AxisEvent, ButtonEvent, Compositor, CompositorBuilder, Cursor, InputManagerHandler,
               KeyEvent, KeyboardHandler, MotionEvent, OutputBuilder, OutputBuilderResult,
               OutputHandler, OutputLayout, OutputManagerHandler, PointerHandler, XCursorTheme};
+
 use wlroots::types::{KeyboardHandle, OutputHandle, PointerHandle};
 use wlroots::wlroots_sys::gl;
 use wlroots::wlroots_sys::wlr_button_state::WLR_BUTTON_RELEASED;
@@ -54,6 +55,7 @@ impl OutputManagerHandler for OutputManager {
                 .as_ref()
                 .expect("Could not get output layout");
             result.output.add_layout_auto(layout.clone());
+
             /*let xcursor = cursor.xcursor().expect("XCursor was not set!");
             let image = &xcursor.images()[0];
             if result.output.set_cursor(image).is_err() {
@@ -149,14 +151,23 @@ impl InputManagerHandler for InputManager {
 
 fn main() {
     let mut cursor = Cursor::new().expect("Could not create cursor");
-    /*let xcursor_theme = XCursorTheme::load_theme(None, 16).expect("Could not load theme");
-    let xcursor = xcursor_theme
-        .get_cursor("left_ptr".into())
-        .expect("Could not load cursor from theme");
-    let layout = Rc::new(RefCell::new(OutputLayout::new()));
-    cursor.set_xcursor(Some(xcursor));
+    let xcursor_theme = XCursorTheme::load(None, 16).expect("Could not load theme");
+    assert!(xcursor_theme.cursor_count() > 0);
 
-    cursor.attach_output_layout(layout);*/
+    let xcursor = xcursor_theme
+        .get_cursor("plus".into())
+        .expect(format!("Could not load cursor from theme: '{}'",
+                              xcursor_theme.name()).as_ref());
+
+    let layout = Rc::new(RefCell::new(OutputLayout::new()));
+
+    let cursor_images = xcursor.images();
+    assert!(cursor_images.len() > 0);
+
+    let image = cursor_images.get(0).expect("Failed to get image from xcursor");
+
+    cursor.set_xcursor_image(image);
+    cursor.attach_output_layout(layout);
     let compositor = CompositorBuilder::new().build_auto(State::new(cursor),
                                                          Box::new(InputManager),
                                                          Box::new(OutputManager));

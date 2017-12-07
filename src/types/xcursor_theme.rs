@@ -14,7 +14,7 @@ pub struct XCursorTheme {
 
 impl XCursorTheme {
     /// If no name is given, defaults to "default".
-    pub fn load_theme(name: Option<String>, size: i32) -> Option<Self> {
+    pub fn load(name: Option<String>, size: i32) -> Option<Self> {
         unsafe {
             let name_ptr = name.map_or(ptr::null(), |s| safe_as_cstring(s).as_ptr());
             let theme = wlr_xcursor_theme_load(name_ptr, size);

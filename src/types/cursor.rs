@@ -5,9 +5,10 @@ use std::ptr;
 use std::rc::Rc;
 use types::input_device::InputDevice;
 use types::output::OutputLayout;
+use types::xcursor::XCursorImage;
 
 use wlroots_sys::{wlr_cursor, wlr_cursor_attach_output_layout, wlr_cursor_create,
-                  wlr_cursor_destroy, wlr_cursor_move, wlr_cursor_warp};
+                  wlr_cursor_destroy, wlr_cursor_move, wlr_cursor_set_image, wlr_cursor_warp};
 
 #[derive(Debug)]
 pub struct Cursor {
@@ -58,6 +59,38 @@ impl Cursor {
 
     pub fn output_layout(&self) -> &Option<Rc<RefCell<OutputLayout>>> {
         &self.layout
+    }
+
+    pub fn set_image(&mut self,
+                     pixels: &[u8],
+                     stride: i32,
+                     width: u32,
+                     height: u32,
+                     hotspot_x: i32,
+                     hotspot_y: i32,
+                     scale: u32) {
+        unsafe {
+            wlr_cursor_set_image(self.cursor,
+                                 pixels.as_ptr(),
+                                 stride,
+                                 width,
+                                 height,
+                                 hotspot_x,
+                                 hotspot_y,
+                                 scale)
+        }
+    }
+
+    pub fn set_xcursor_image(&mut self, image: &XCursorImage) {
+        let size = image.size();
+        let hotspots = image.hotspots();
+        self.set_image(image.pixels(),
+                       size.0 as i32,
+                       size.0,
+                       size.1,
+                       hotspots.0 as i32,
+                       hotspots.1 as i32,
+                       1u32)
     }
 }
 

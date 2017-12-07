@@ -1,6 +1,6 @@
 //! Wrapper for wlr_xcursor
 
-use std::slice;
+use std::{mem, slice};
 use std::marker::PhantomData;
 use wlroots_sys::{wlr_xcursor, wlr_xcursor_frame, wlr_xcursor_image};
 
@@ -45,6 +45,26 @@ impl<'image> XCursorImage<'image> {
         XCursorImage {
             image,
             _phantom: PhantomData
+        }
+    }
+
+    pub fn size(&self) -> (u32, u32) {
+        unsafe { ((*self.image).width, (*self.image).width) }
+    }
+
+    pub fn hotspots(&self) -> (u32, u32) {
+        unsafe { ((*self.image).hotspot_x, (*self.image).hotspot_y) }
+    }
+
+    pub fn delay(&self) -> u32 {
+        unsafe { (*self.image).delay }
+    }
+
+    pub fn pixels(&self) -> &'image [u8] {
+        unsafe {
+            slice::from_raw_parts((*self.image).buffer as *const u8,
+                                  (*self.image).width as usize * (*self.image).height as usize *
+                                      mem::size_of::<u32>())
         }
     }
 }
