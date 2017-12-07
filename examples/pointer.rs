@@ -15,7 +15,7 @@ use wlroots::xkbcommon::xkb::keysyms::KEY_Escape;
 struct State {
     color: [f32; 4],
     default_color: [f32; 4],
-    cursor: Cursor
+    pub cursor: Cursor
 }
 
 impl State {
@@ -48,6 +48,9 @@ impl OutputManagerHandler for OutputManager {
         let result = builder.build_best_mode(Output);
         let state: &mut State = compositor.into();
         let cursor = &mut state.cursor;
+
+        cursor.map_to_output(None);
+
         // TODO use output config if present instead of auto
         {
             let layout = cursor
@@ -55,14 +58,10 @@ impl OutputManagerHandler for OutputManager {
                 .as_ref()
                 .expect("Could not get output layout");
             result.output.add_layout_auto(layout.clone());
-
-            /*let xcursor = cursor.xcursor().expect("XCursor was not set!");
-            let image = &xcursor.images()[0];
-            if result.output.set_cursor(image).is_err() {
-                wlr_log!(L_DEBUG, "Failed to set hardware cursor");
-                return None;
-            }*/
         }
+
+        cursor.map_to_output(Some(result.output));
+
         let (x, y) = cursor.coords();
         // https://en.wikipedia.org/wiki/Mouse_warping
         cursor.warp(None, x, y);
@@ -90,7 +89,8 @@ impl PointerHandler for Pointer {
                  event: &MotionEvent) {
         let state: &mut State = compositor.into();
         let (delta_x, delta_y) = event.delta();
-        state.cursor.move_to(&event.device(), delta_x, delta_y);
+
+        state.cursor.move_to(&event.device(), delta_x + 10f64, delta_y + 10f64);
     }
 
     fn on_button(&mut self,
@@ -135,9 +135,13 @@ impl OutputHandler for Output {
 
 impl InputManagerHandler for InputManager {
     fn pointer_added(&mut self,
-                     _: &mut Compositor,
-                     _: &mut PointerHandle)
+                     compositor: &mut Compositor,
+                     pointer: &mut PointerHandle)
                      -> Option<Box<PointerHandler>> {
+        let state: &mut State = compositor.into();
+
+        state.cursor.attach_input_device(pointer);
+
         Some(Box::new(Pointer))
     }
 
@@ -157,14 +161,17 @@ fn main() {
     let xcursor = xcursor_theme
         .get_cursor("plus".into())
         .expect(format!("Could not load cursor from theme: '{}'",
-                              xcursor_theme.name()).as_ref());
+                        xcursor_theme.name())
+                    .as_ref());
 
     let layout = Rc::new(RefCell::new(OutputLayout::new()));
 
     let cursor_images = xcursor.images();
     assert!(cursor_images.len() > 0);
 
-    let image = cursor_images.get(0).expect("Failed to get image from xcursor");
+    let image = cursor_images
+        .get(0)
+        .expect("Failed to get image from xcursor");
 
     cursor.set_xcursor_image(image);
     cursor.attach_output_layout(layout);

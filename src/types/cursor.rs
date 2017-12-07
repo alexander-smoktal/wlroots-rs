@@ -4,11 +4,13 @@ use std::cell::RefCell;
 use std::ptr;
 use std::rc::Rc;
 use types::input_device::InputDevice;
-use types::output::OutputLayout;
+use types::output::{OutputHandle, OutputLayout};
+use types::pointer::PointerHandle;
 use types::xcursor::XCursorImage;
 
 use wlroots_sys::{wlr_cursor, wlr_cursor_attach_output_layout, wlr_cursor_create,
-                  wlr_cursor_destroy, wlr_cursor_move, wlr_cursor_set_image, wlr_cursor_warp};
+                  wlr_cursor_destroy, wlr_cursor_map_to_output, wlr_cursor_attach_input_device, wlr_cursor_move,
+                  wlr_cursor_set_image, wlr_cursor_warp};
 
 #[derive(Debug)]
 pub struct Cursor {
@@ -91,6 +93,14 @@ impl Cursor {
                        hotspots.0 as i32,
                        hotspots.1 as i32,
                        1u32)
+    }
+
+    pub fn map_to_output(&self, output: Option<&mut OutputHandle>) {
+        unsafe { wlr_cursor_map_to_output(self.cursor, output.map_or(ptr::null_mut(), |out| out.to_ptr())) }
+    }
+
+    pub fn attach_input_device(&self, input: &mut PointerHandle) {
+        unsafe { wlr_cursor_attach_input_device(self.cursor, input.input_device()) }
     }
 }
 
